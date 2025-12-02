@@ -707,7 +707,7 @@ teleportModule:AddText("To teleport you have to be in ragdoll mode first.")
 
 local deadDropTPs = teleportModule:AddList("Place Teleports")
 if workspace:FindFirstChild("CurrentMap") then
-	for i, v in workspace:WaitForChild("CurrentMap"):WaitForChild("Round"):WaitForChild("Core"):WaitForChild("DeadDrops"):GetChildren() do
+	for i, v in workspace:WaitForChild("CurrentMap"):WaitForChild("round_default"):WaitForChild("Core"):WaitForChild("DeadDrops"):GetChildren() do
 		deadDropTPs:AddListItem(v.Name, v)
 	end
 end
@@ -720,7 +720,7 @@ for i, t in baseTeamNames do
 	baseTPs:AddListItem(t, i)
 end
 baseTPs.OnItemChanged:Connect(function(baseID)
-	local base = workspace:WaitForChild("CurrentMap"):WaitForChild("Round"):WaitForChild("Core"):WaitForChild("Bases"):WaitForChild(baseID):WaitForChild("Bounds")
+	local base = workspace:WaitForChild("CurrentMap"):WaitForChild("round_default"):WaitForChild("Core"):WaitForChild("Bases"):WaitForChild(baseID):WaitForChild("Bounds")
 	teleportTo(base)
 end)
 
@@ -747,6 +747,174 @@ carKill.Activated:Connect(function()
 		end
 	end)
 end)
+
+-- Target Teleport GUI Module -------------------------------------------------
+local targetModule = window:createNewModule("Target Teleport")
+
+-- GUI controls
+local playerList = targetModule:AddList("Target Player")
+local distanceSlider = targetModule:AddSlider("Distance In Front", 1, 50) -- studs
+local heightSlider = targetModule:AddSlider("Height Offset", -10, 50) -- studs
+local startToggle, startToggled = targetModule:AddToggle("Start Teleport Loop")
+
+-- runtime state
+local currentTargetName = nil
+local renderConnection = nil
+local fixedPosition = nil
+
+-- helper: populate dropdown with current players
+local function refreshPlayerList()
+	-- clear all items (Eris gui list API doesn't expose clear so we re-create)
+	-- If your GUI list API supports clearing, use that instead.
+	-- This implementation recreates entries by using indices 1..n
+	playerList:ClearAllItems && playerList:ClearAllItems() -- if supported (safe no-op if nil)
+	-- fallback: iterate players and add
+	for i, p in ipairs(game.Players:GetPlayers()) do
+		-- don't add LocalPlayer as a selectable target if you want; keeping all for flexibility
+		playerList:AddListItem(p.Name, p.Name)
+	end
+end
+
+-- initial populate
+refreshPlayerList()
+
+-- keep dropdown up to date
+game.Players.PlayerAdded:Connect(function(p)
+	-- small delay so UI libraries that expect stable state don't break
+	task.wait(0.1)
+	playerList:AddListItem(p.Name, p.Name)
+end)
+game.Players.PlayerRemoving:Connect(function(p)
+	-- rebuild list to remove the name cleanly
+	task.wait(0.05)
+	refreshPlayerList()
+	-- if removed player was current target, stop loop
+	if currentTargetName == p.Name and startToggled:GetState() then
+		startToggled:SetState(false)
+	end
+end)
+
+-- when user picks from dropdown
+playerList.OnItemChanged:Connect(function(selectedValue)
+	currentTargetName = selectedValue
+end)
+
+-- function to find target model in workspace
+local function findTargetModelByName(name)
+	if not name then return nil end
+	local model = workspace:FindFirstChild(name)
+	if model and model:FindFirstChild("Head") then
+		return model
+	end
+	return nil
+end
+
+-- capture fixed world position relative to local player's HRP
+local function captureFixedPosition(distance, height)
+	local localChar = workspace:FindFirstChild(game.Players.LocalPlayer.Name)
+	if not localChar then return nil, "Local character not found" end
+	local hrp = localChar:FindFirstChild("HumanoidRootPart")
+	if not hrp then return nil, "HumanoidRootPart not found" end
+
+	local forward = hrp.CFrame.LookVector
+	local pos = hrp.Position + forward.Unit * distance + Vector3.new(0, height, 0)
+	return pos
+end
+
+-- RenderStepped loop that keeps target's Head at the fixed position
+local function startLoopForTarget(targetName)
+	-- make sure we don't have a running connection
+	if renderConnection then
+		renderConnection:Disconnect()
+		renderConnection = nil
+	end
+
+	-- capture position now
+	local distance = distanceSlider:GetValue() or 10
+	local height = heightSlider:GetValue() or 3
+	local pos, err = captureFixedPosition(distance, height)
+	if not pos then
+		warn("Target Teleport: failed to capture position - " .. (err or "unknown"))
+		startToggled:SetState(false)
+		return
+	end
+	fixedPosition = pos
+
+	-- start streaming every frame
+	renderConnection = RunService.RenderStepped:Connect(function()
+		local targetModel = findTargetModelByName(targetName)
+		if not targetModel then return end
+		local targetHead = targetModel:FindFirstChild("Head")
+		if targetHead and targetHead:IsA("BasePart") then
+			-- set absolute CFrame at fixedPosition (no rotation)
+			targetHead.CFrame = CFrame.new(fixedPosition)
+		end
+	end)
+end
+
+local function stopLoop()
+	if renderConnection then
+		renderConnection:Disconnect()
+		renderConnection = nil
+	end
+end
+
+-- toggle handler
+startToggle.Activated:Connect(function()
+	if startToggled:GetState() == false then
+		-- user turned it off: stop loop
+		stopLoop()
+		return
+	end
+
+	-- if no target selected, try to auto-select first player (not local)
+	if not currentTargetName then
+		for _, p in ipairs(game.Players:GetPlayers()) do
+			if p ~= game.Players.LocalPlayer then
+				currentTargetName = p.Name
+				break
+			end
+		end
+	end
+
+	if not currentTargetName then
+		warn("Target Teleport: no target selected")
+		startToggled:SetState(false)
+		return
+	end
+
+	startLoopForTarget(currentTargetName)
+end)
+
+-- allow changing distance/height while running: if slider changes while active we recapture fixedPos
+distanceSlider.OnValueChanged:Connect(function()
+	if startToggled:GetState() then
+		-- recapture using new distance but keep same height value from slider
+		local distance = distanceSlider:GetValue() or 10
+		local height = heightSlider:GetValue() or 3
+		local pos, err = captureFixedPosition(distance, height)
+		if pos then
+			fixedPosition = pos
+		end
+	end
+end)
+heightSlider.OnValueChanged:Connect(function()
+	if startToggled:GetState() then
+		local distance = distanceSlider:GetValue() or 10
+		local height = heightSlider:GetValue() or 3
+		local pos, err = captureFixedPosition(distance, height)
+		if pos then
+			fixedPosition = pos
+		end
+	end
+end)
+
+-- clean up if GUI destroyed
+if window and window.GUI then
+	window.GUI.Destroying:Connect(function()
+		stopLoop()
+	end)
+end
 -----------------------------------------------------------------------------------------------------------------
 
 -- Credit Notification ------------------------------------------------------------------------------------------
