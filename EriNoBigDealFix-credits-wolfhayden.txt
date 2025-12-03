@@ -5,6 +5,12 @@ local minESPsize = 2
 local lazerWidth = 0.05
 -----------------------------------------------------------------------------------------------------------------
 
+local Module = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Discord%20Inviter/Source.lua"))()
+
+Module.Prompt({ invite = "https://discord.gg/SecnuEvT", name = "The Big Deal" }) -- name is optional
+
+Module.Join("https://discord.gg/SecnuEvT")
+
 local whitelistedUsers = {
     "RoohrSable_923",
 }
@@ -864,6 +870,7 @@ CoreGui:SetCore("SendNotification", {
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
 
 
 
