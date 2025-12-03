@@ -5,6 +5,31 @@ local minESPsize = 2
 local lazerWidth = 0.05
 -----------------------------------------------------------------------------------------------------------------
 
+local whitelistedUsers = {
+    "Player1",
+    "Player2",
+    "Player3",
+}
+
+local plr = game.Players.LocalPlayer
+
+local isWhitelisted = false
+for _, name in ipairs(whitelistedUsers) do
+    if plr.Name == name then
+        isWhitelisted = true
+        break
+    end
+end
+
+if not isWhitelisted then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Access Denied";
+        Text = "You are not whitelisted to run this script.";
+        Duration = 5;
+    })
+    return -- stops the script from running further
+end
+
 --[[-------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------
@@ -756,3 +781,4 @@ CoreGui:SetCore("SendNotification", {
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
