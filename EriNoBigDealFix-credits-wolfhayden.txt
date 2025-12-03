@@ -515,47 +515,44 @@ PlayerESP.Activated:Connect(function()
 		return Color3.new(1, 1, 1)
 	end
 
-	for i, p in game.Players:GetPlayers() do
-		local playerChar = workspace:FindFirstChild(p.Name)
-		if playerChar then
-            local teamColor = getTeamColor(playerChar)
-			if playerChar:FindFirstChild("Head") then
-				local createdESP = CreateESP(playerChar:FindFirstChild("Head"), teamColor)
-				createdESP:FindFirstChildOfClass("TextLabel").TextTransparency = 1
-				createdESP:FindFirstChildOfClass("TextLabel"):FindFirstChildOfClass("UIStroke").Thickness = 1
-				table.remove(ESPCache, table.find(ESPCache, createdESP))
-				table.insert(createdPlayerESPs, createdESP)
-			end
-			if playerChar:FindFirstChild("Torso") then
-				local createdESP = CreateESP(playerChar:FindFirstChild("Torso"), teamColor)
-				createdESP:FindFirstChildOfClass("TextLabel").TextTransparency = 1
-				createdESP:FindFirstChildOfClass("TextLabel"):FindFirstChildOfClass("UIStroke").Thickness = 1
-				table.remove(ESPCache, table.find(ESPCache, createdESP))
-				table.insert(createdPlayerESPs, createdESP)
-			end
-		end
-	end
-end)
-workspace.ChildAdded:Connect(function(c)
-	if playerESPtoggled:GetState() == false then return end
-	task.wait(1)
-	if game.Players:FindFirstChild(c.Name) and c:IsA("Model") then
-        local teamColor = getTeamColor(c)
-		if c:FindFirstChild("Head") then
-			local createdESP = CreateESP(c:FindFirstChild("Head"), teamColor)
-			createdESP:FindFirstChildOfClass("TextLabel").TextTransparency = 1
-			createdESP:FindFirstChildOfClass("TextLabel"):FindFirstChildOfClass("UIStroke").Thickness = 1
-			table.remove(ESPCache, table.find(ESPCache, createdESP))
-			table.insert(createdPlayerESPs, createdESP)
-		end
-		if c:FindFirstChild("Torso") then
-			local createdESP = CreateESP(c:FindFirstChild("Torso"), teamColor)
-			createdESP:FindFirstChildOfClass("TextLabel").TextTransparency = 1
-			createdESP:FindFirstChildOfClass("TextLabel"):FindFirstChildOfClass("UIStroke").Thickness = 1
-			table.remove(ESPCache, table.find(ESPCache, createdESP))
-			table.insert(createdPlayerESPs, createdESP)
-		end
-	end
+	-- Detect new players and late-loading heads/torso
+for _, player in ipairs(game.Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function(char)
+        char.DescendantAdded:Connect(function(d)
+            if playerESPtoggled:GetState() == false then return end
+            if not d:IsA("BasePart") then return end
+            if d.Name ~= "Head" and d.Name ~= "Torso" then return end
+
+            local teamColor = getTeamColor(char)
+            local esp = CreateESP(d, teamColor)
+            local label = esp:FindFirstChildOfClass("TextLabel")
+            label.TextTransparency = 1
+            label:FindFirstChildOfClass("UIStroke").Thickness = 1
+
+            table.remove(ESPCache, table.find(ESPCache, esp))
+            table.insert(createdPlayerESPs, esp)
+        end)
+    end)
+end
+
+-- Detect players who join later
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(char)
+        char.DescendantAdded:Connect(function(d)
+            if playerESPtoggled:GetState() == false then return end
+            if not d:IsA("BasePart") then return end
+            if d.Name ~= "Head" and d.Name ~= "Torso" then return end
+
+            local teamColor = getTeamColor(char)
+            local esp = CreateESP(d, teamColor)
+            local label = esp:FindFirstChildOfClass("TextLabel")
+            label.TextTransparency = 1
+            label:FindFirstChildOfClass("UIStroke").Thickness = 1
+
+            table.remove(ESPCache, table.find(ESPCache, esp))
+            table.insert(createdPlayerESPs, esp)
+        end)
+    end)
 end)
 
 local lazerModule = window:createNewModule("Lazers")
@@ -870,6 +867,7 @@ CoreGui:SetCore("SendNotification", {
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
 
 
 
