@@ -459,60 +459,57 @@ espModule:AddDivider()
 local useTeamColor, useTeamColorToggled = espModule:AddToggle("Use Team Colors")
 local PlayerESP, playerESPtoggled = espModule:AddToggle("Player ESP")
 local createdPlayerESPs = {}
+
+local function getTeamColor(char)
+    if not useTeamColorToggled:GetState() then
+        return Color3.new(1, 1, 1)
+    end
+
+    local vest = char:FindFirstChild("Vest")
+    if vest then
+        local h = vest:FindFirstChild("Handle")
+        if h then
+            for _, obj in ipairs(h:GetChildren()) do
+                if obj:IsA("MeshPart") and obj.Name == "nbdsuits1_ShirtVest" then
+                    return obj.Color
+                end
+            end
+        end
+    end
+
+    local pants = char:FindFirstChild("SuitPantsL")
+    if pants then
+        local h = pants:FindFirstChild("Handle")
+        if h then
+            for _, obj in ipairs(h:GetChildren()) do
+                if obj:IsA("MeshPart") and obj.Name == "nbdsuits1_PantsLeg" then
+                    return obj.Color
+                end
+            end
+        end
+    end
+
+    local skirt = char:FindFirstChild("SkirtLeft")
+    if skirt then
+        local h = skirt:FindFirstChild("Handle")
+        if h then
+            for _, obj in ipairs(h:GetChildren()) do
+                if obj:IsA("MeshPart") and obj.Name == "skirtleft" then
+                    return obj.Color
+                end
+            end
+        end
+    end
+
+    return Color3.new(1,1,1)
+end
+
 PlayerESP.Activated:Connect(function()
 	if playerESPtoggled:GetState() == false then
 		for _, ce in createdPlayerESPs do
 			ce:Destroy()
 		end
 		return
-	end
-
-	local function getTeamColor(char)
-		if not useTeamColorToggled:GetState() then
-			return Color3.new(1, 1, 1)
-		end
-
-		-- Vest
-		local vest = char:FindFirstChild("Vest")
-		if vest then
-			local h = vest:FindFirstChild("Handle")
-			if h then
-				for _, obj in ipairs(h:GetChildren()) do
-					if obj:IsA("MeshPart") and obj.Name == "nbdsuits1_ShirtVest" then
-						return obj.Color
-					end
-				end
-			end
-		end
-
-		-- Pants
-		local pants = char:FindFirstChild("SuitPantsL")
-		if pants then
-			local h = pants:FindFirstChild("Handle")
-			if h then
-				for _, obj in ipairs(h:GetChildren()) do
-					if obj:IsA("MeshPart") and obj.Name == "nbdsuits1_PantsLeg" then
-						return obj.Color
-					end
-				end
-			end
-		end
-
-		-- Skirt
-		local skirt = char:FindFirstChild("SkirtLeft")
-		if skirt then
-			local h = skirt:FindFirstChild("Handle")
-			if h then
-				for _, obj in ipairs(h:GetChildren()) do
-					if obj:IsA("MeshPart") and obj.Name == "skirtleft" then
-						return obj.Color
-					end
-				end
-			end
-		end
-
-		-- Default
-		return Color3.new(1, 1, 1)
 	end
 
 	for i, p in game.Players:GetPlayers() do
@@ -870,3 +867,4 @@ CoreGui:SetCore("SendNotification", {
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
