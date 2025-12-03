@@ -772,6 +772,91 @@ carKill.Activated:Connect(function()
 		end
 	end)
 end)
+
+-- Create a new module/tab
+local headTeleportModule = window:createNewModule("Head Teleporter")
+
+local distanceInFront = 10 -- distance from local player
+local teleportLoop = nil
+local buttons = {}
+
+-- Function to get all player heads (excluding local player)
+local function getAllHeads()
+    local heads = {}
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= plr and player.Character and player.Character:FindFirstChild("Head") then
+            heads[player.Name] = player.Character.Head
+        end
+    end
+    return heads
+end
+
+-- Get precise position in front of local player
+local function getFixedPosition()
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    local lookVector = hrp.CFrame.LookVector
+    local position = hrp.Position + (lookVector * distanceInFront) + Vector3.new(0, 3, 0)
+    return position
+end
+
+-- Teleport head precisely
+local function teleportHead(head)
+    local pos = getFixedPosition()
+    if pos then
+        head.CFrame = CFrame.new(pos)
+    end
+end
+
+-- Start teleport loop
+local function startTeleport(head)
+    if teleportLoop then teleportLoop:Disconnect() end
+    teleportLoop = game:GetService("RunService").RenderStepped:Connect(function()
+        teleportHead(head)
+    end)
+end
+
+-- Stop teleport loop
+local function stopTeleport()
+    if teleportLoop then
+        teleportLoop:Disconnect()
+        teleportLoop = nil
+    end
+end
+
+-- Update buttons dynamically
+local function updateButtons()
+    local heads = getAllHeads()
+
+    -- Remove buttons for players who left
+    for name, btn in pairs(buttons) do
+        if not heads[name] then
+            btn:Destroy()
+            buttons[name] = nil
+        end
+    end
+
+    -- Add buttons for new players
+    for name, head in pairs(heads) do
+        if not buttons[name] then
+            local btn, toggled = headTeleportModule:AddButton("Teleport " .. name)
+            btn.Activated:Connect(function()
+                startTeleport(head)
+            end)
+            buttons[name] = btn
+        end
+    end
+end
+
+-- Add stop teleport button
+local stopBtn, stopToggled = headTeleportModule:AddButton("Stop Teleport")
+stopBtn.Activated:Connect(stopTeleport)
+
+-- Connect dynamic updates
+game.Players.PlayerAdded:Connect(updateButtons)
+game.Players.PlayerRemoving:Connect(updateButtons)
+game:GetService("RunService").Heartbeat:Connect(updateButtons)
+
 -----------------------------------------------------------------------------------------------------------------
 
 -- Credit Notification ------------------------------------------------------------------------------------------
@@ -781,4 +866,5 @@ CoreGui:SetCore("SendNotification", {
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
 
