@@ -7,8 +7,6 @@ local lazerWidth = 0.05
 
 local whitelistedUsers = {
     "RoohrSable_923",
-    "Player2",
-    "Player3",
 }
 
 local plr = game.Players.LocalPlayer
@@ -862,10 +860,11 @@ game:GetService("RunService").Heartbeat:Connect(updateButtons)
 -- Credit Notification ------------------------------------------------------------------------------------------
 CoreGui:SetCore("SendNotification", {
 	Title = "No Big Deal Cheat Injected";
-	Text = "Made by Eri";
+	Text = "Made by Wolf";
 	Duration = 5;
 })
 -----------------------------------------------------------------------------------------------------------------
+
 
 
 
